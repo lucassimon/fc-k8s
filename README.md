@@ -1,5 +1,15 @@
 # Projeto FC
 
+[Gestão de tarefas](https://github.com/lucassimon/fc-k8s)
+
+## Visao geral
+
+![Visao Geral](./static/overview/contexto.png)
+
+## Infra
+
+TODO: Fazer diagramas
+
 ## keycloack
 
 [Getting started docker](https://www.keycloak.org/getting-started/getting-started-docker)
