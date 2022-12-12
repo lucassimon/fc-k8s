@@ -1,6 +1,6 @@
 # Projeto FC
 
-[Gestão de tarefas](https://github.com/lucassimon/fc-k8s)
+[Gestão de tarefas](https://github.com/lucassimon/fc-k8s/issues)
 
 ## Visao geral
 
