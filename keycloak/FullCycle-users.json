@@ -1,0 +1,88 @@
+{
+    "realm" : "FullCycle",
+    "users" : [ {
+      "id" : "f44d0a54-935e-409a-a549-ffd92963477f",
+      "createdTimestamp" : 1670801852485,
+      "username" : "fullcycle",
+      "enabled" : true,
+      "totp" : false,
+      "emailVerified" : true,
+      "firstName" : "fullcycle",
+      "lastName" : "fullcycle",
+      "email" : "fullcycle@fullcycle.com.br",
+      "credentials" : [ {
+        "id" : "b477ee3f-6637-463f-af51-064ee8d19009",
+        "type" : "password",
+        "userLabel" : "My password",
+        "createdDate" : 1670801866616,
+        "secretData" : "{\"value\":\"+m2k2agsWHv3dBsp0NxBTzHYNnokfNOqGXUEG2PKqc0DeVpl+BDpJ+I8Lk6PQu670x0AjosF77dAmQR9oKEi1w==\",\"salt\":\"1XOHBP+DVX80X5WPD9jmFg==\",\"additionalParameters\":{}}",
+        "credentialData" : "{\"hashIterations\":27500,\"algorithm\":\"pbkdf2-sha256\",\"additionalParameters\":{}}"
+      } ],
+      "disableableCredentialTypes" : [ ],
+      "requiredActions" : [ ],
+      "realmRoles" : [ "default-roles-fullcycle" ],
+      "notBefore" : 0,
+      "groups" : [ "/administrators" ]
+    }, {
+      "id" : "49a09382-a9c1-412e-8e60-85248e6acd5d",
+      "createdTimestamp" : 1670806115969,
+      "username" : "lucassrod",
+      "enabled" : true,
+      "totp" : false,
+      "emailVerified" : true,
+      "firstName" : "Lucas",
+      "lastName" : "Simon",
+      "email" : "lucassrod@gmail.com",
+      "credentials" : [ {
+        "id" : "a3bf9965-64c4-4732-a1cf-11e05eff7982",
+        "type" : "password",
+        "createdDate" : 1670806116023,
+        "secretData" : "{\"value\":\"mSf7kF1/N2Gf4dpfseL1Fies4hgc9l8gbNShm6QC0oz85KH8yK1TnjDBFHligNfOB4zZwtXtLRzcVWXuGz+fMQ==\",\"salt\":\"LrnMkbilaqtck/I0fb1cnw==\",\"additionalParameters\":{}}",
+        "credentialData" : "{\"hashIterations\":27500,\"algorithm\":\"pbkdf2-sha256\",\"additionalParameters\":{}}"
+      } ],
+      "disableableCredentialTypes" : [ ],
+      "requiredActions" : [ ],
+      "realmRoles" : [ "default-roles-fullcycle" ],
+      "notBefore" : 0,
+      "groups" : [ "/customers" ]
+    }, {
+      "id" : "13e528f0-9a1a-4aba-a84d-10b96f5f7ca1",
+      "createdTimestamp" : 1670805693369,
+      "username" : "service-account-auth-service",
+      "enabled" : true,
+      "totp" : false,
+      "emailVerified" : false,
+      "serviceAccountClientId" : "auth-service",
+      "credentials" : [ ],
+      "disableableCredentialTypes" : [ ],
+      "requiredActions" : [ ],
+      "realmRoles" : [ "default-roles-fullcycle" ],
+      "clientRoles" : {
+        "realm-management" : [ "manage-users", "view-users" ]
+      },
+      "notBefore" : 0,
+      "groups" : [ ]
+    }, {
+      "id" : "58f79c48-f3a0-4d26-b25a-e49495bb9da6",
+      "createdTimestamp" : 1670805298607,
+      "username" : "strange",
+      "enabled" : true,
+      "totp" : false,
+      "emailVerified" : true,
+      "firstName" : "Stephen",
+      "lastName" : "Strange",
+      "email" : "drstranger@marvel.com",
+      "credentials" : [ {
+        "id" : "2c9866d5-a4b7-4927-97c8-aa3038f2b25a",
+        "type" : "password",
+        "createdDate" : 1670805298662,
+        "secretData" : "{\"value\":\"cLUII8AiteW1nyf0OYzG//PN7KGTWfoTeISfH3d4Gs3QE3cuHxMIKDy7gF2rtL2YjpIkYZfjTYIWWfEXpXdNhw==\",\"salt\":\"qqcIStoBgYQ3udt25QZKPw==\",\"additionalParameters\":{}}",
+        "credentialData" : "{\"hashIterations\":27500,\"algorithm\":\"pbkdf2-sha256\",\"additionalParameters\":{}}"
+      } ],
+      "disableableCredentialTypes" : [ ],
+      "requiredActions" : [ ],
+      "realmRoles" : [ "default-roles-fullcycle" ],
+      "notBefore" : 0,
+      "groups" : [ ]
+    } ]
+  }
