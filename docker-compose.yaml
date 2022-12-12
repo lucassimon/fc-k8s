@@ -1,0 +1,333 @@
+version: "3.8"
+
+networks:
+  fc:
+    name: fc-network
+    driver: bridge
+
+volumes:
+  postgres_data:
+
+
+services:
+
+  ###
+  ### Banco de dados
+  ### Nesse momento estamos usando o modelo de deployment com banco de dados, o que indica
+  ### que as configuracoes a.k.a rotas,servicos e plugins ficam persistidas nele
+  ###
+  kong-database:
+    image: postgres:9.5
+    deploy:
+      restart_policy:
+        condition: any
+    networks:
+      - default
+      - fc
+    environment:
+      - POSTGRES_USER=kong
+      - POSTGRES_DB=kong
+      - POSTGRES_PASSWORD=kong
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "kong" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ###
+  ### Inicio do banco de dados
+  ### Esse container ira realizar as criacoes iniciais das tabelas necessarias para
+  ### armazenamento das configuracoes do Kong
+  ###
+  kong-migration-bootstrap:
+    image: claudioed/kong-fc
+    deploy:
+      restart_policy:
+        condition: on-failure
+    networks:
+      - default
+      - fc
+    depends_on:
+      - kong-database
+    environment:
+      - KONG_DATABASE=postgres
+      - KONG_PG_HOST=kong-database
+      - KONG_PG_USER=kong
+      - KONG_PG_PASSWORD=kong
+    command: kong migrations bootstrap
+
+  ###
+  ### Inicio do banco de dados
+  ### Esse container ira realizar as configuracoes iniciais das tabelas necessarias para
+  ### armazenamento das configuracoes do Kong
+  ###
+  kong-migration-up:
+    image: claudioed/kong-fc
+    networks:
+      - default
+      - fc
+    deploy:
+      restart_policy:
+        condition: on-failure
+    depends_on:
+      - kong-database
+    environment:
+      - KONG_DATABASE=postgres
+      - KONG_PG_HOST=kong-database
+      - KONG_PG_USER=kong
+      - KONG_PG_PASSWORD=kong
+    command: kong migrations up
+
+  ###
+  ### Kong API Gateway
+  ### Container com o runtime do Kong API Gateway
+  ###
+  kong:
+    image: claudioed/kong-fc
+    networks:
+      - default
+      - fc
+    deploy:
+      restart_policy:
+        condition: any
+    depends_on:
+      - kong-database
+    environment:
+      - KONG_DATABASE=postgres
+      - KONG_PG_HOST=kong-database
+      - KONG_PG_DATABASE=kong
+      - KONG_PG_PASSWORD=kong
+      - KONG_PROXY_ACCESS_LOG=/dev/stdout
+      - KONG_ADMIN_ACCESS_LOG=/dev/stdout
+      - KONG_PROXY_ERROR_LOG=/dev/stderr
+      - KONG_ADMIN_ERROR_LOG=/dev/stderr
+      - KONG_ADMIN_LISTEN=0.0.0.0:8001, 0.0.0.0:8444 ssl
+      - KONG_PROXY_LISTEN=0.0.0.0:8000, 0.0.0.0:8443 ssl http2
+      - KONG_ADMIN_LISTEN=0.0.0.0:8001
+      - KONG_REAL_IP_RECURSIVE=on
+      - KONG_NGINX_HTTP_RESOLVER=8.8.8.8
+      - KONG_PLUGINS=bundled
+    ports:
+      - "80:8000"
+      - "443:8443"
+      - "8001:8001"
+    healthcheck:
+      test: [ "CMD", "wget", "-O-", "http://kong:8001/status" ]
+      interval: 5s
+      retries: 10
+    restart: on-failure
+
+  postgres:
+    image: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak
+
+  keycloak:
+    #  latest == 20.0
+    image: quay.io/keycloak/keycloak:latest
+    command: start-dev
+    environment:
+      DB_VENDOR: POSTGRES
+      DB_ADDR: postgres
+      DB_DATABASE: keycloak
+      DB_USER: keycloak
+      DB_SCHEMA: public
+      DB_PASSWORD: keycloak
+      ROOT_LOGLEVEL: DEBUG
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+
+  ###
+  ### Konga
+  ### Administracao via interface grafica do Kong API Gateway
+  ###
+  konga:
+    image: pantsel/konga
+    networks:
+      - default
+      - fc
+    deploy:
+      restart_policy:
+        condition: on-failure
+    depends_on:
+      - kong-database
+    environment:
+      NODE_ENV: development
+    ports:
+      - "1337:1337"
+
+  #######################################
+  # Prometheus
+  #######################################
+  prometheus:
+    image: prom/prometheus
+    networks:
+      - default
+      - fc
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prom-conf/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+  #######################################
+  # Grafana
+  #######################################
+  grafana:
+    image: grafana/grafana
+    networks:
+      - default
+      - fc
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+
+  node_exporter:
+    image: prom/node-exporter:latest
+    networks:
+      - default
+      - fc
+    ports:
+      - "9100:9100"
+    restart: always
+    depends_on:
+      - prometheus
+
+  fluent-bit:
+    image: fluent/fluent-bit:1.9.3
+    volumes:
+      - ./fluent-bit/conf:/fluent-bit/etc
+    ports:
+      - "24224:24224"
+      - "5140:5140/udp"
+      - "2020:2020"
+      - "5170:5170"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: 100m
+        max-file: "5"
+    networks:
+      - default
+      - fc
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.13.1
+    networks:
+      - default
+      - fc
+    environment:
+      - "discovery.type=single-node"
+    ports:
+      - "9200:9200"
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.13.1
+    environment:
+      - "ELASTICSEARCH_HOSTS=http://elasticsearch:9200"
+    networks:
+      - default
+      - fc
+    ports:
+      - "5601:5601"
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.33
+    ports:
+      - "5775:5775/udp"
+      - "6831:6831/udp"
+      - "6832:6832/udp"
+      - "5778:5778"
+      - "16686:16686"
+      - "14250:14250"
+      - "14268:14268"
+      - "14269:14269"
+      - "9411:9411"
+    environment:
+      - COLLECTOR_ZIPKIN_HOST_PORT=9411
+    networks:
+      - default
+      - fc
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.0
+    hostname: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - default
+      - fc
+
+  broker:
+    image: confluentinc/cp-server:7.3.0
+    hostname: broker
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "9094:9094"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092,OUTSIDE://host.docker.internal:9094
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      CONFLUENT_METRICS_ENABLE: 'false'
+      CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
+    networks:
+      - default
+      - fc
+
+  control-center:
+    image: confluentinc/cp-enterprise-control-center:7.3.0
+    hostname: control-center
+    depends_on:
+      - broker
+    ports:
+      - "9021:9021"
+    environment:
+      CONTROL_CENTER_BOOTSTRAP_SERVERS: 'broker:29092'
+      CONTROL_CENTER_REPLICATION_FACTOR: 1
+      CONTROL_CENTER_INTERNAL_TOPICS_PARTITIONS: 1
+      CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
+      CONFLUENT_METRICS_TOPIC_REPLICATION: 1
+      PORT: 9021
+    networks:
+      - default
+      - fc
+
+  kafka-topics-generator:
+    image: confluentinc/cp-server:7.3.0
+    depends_on:
+      - broker
+    command: >
+      bash -c
+        "sleep 10s &&
+        kafka-topics --create --topic=newMatch --if-not-exists --bootstrap-server=broker:29092 &&
+        kafka-topics --create --topic=matchUpdateResult --if-not-exists --bootstrap-server=broker:29092 &&
+        kafka-topics --create --topic=newPlayer --if-not-exists --bootstrap-server=broker:29092 &&
+        kafka-topics --create --topic=chooseTeam --if-not-exists --bootstrap-server=broker:29092 &&
+        kafka-topics --create --topic=newAction --if-not-exists --bootstrap-server=broker:29092"
+    networks:
+      - default
+      - fc
